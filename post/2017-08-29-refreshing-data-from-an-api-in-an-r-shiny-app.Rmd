@@ -1,0 +1,139 @@
+---
+title: "Refreshing Data from an API in an R Shiny App"
+author: "Jesse Harris"
+date: "2017-08-29"
+output: html_document
+---
+
+Posting this in case it helps others like me who are new to Shiny. I was working on a Shiny application with the following requirements:
+
+- When the application loads, pull source data from an API.
+- Automatically refresh the data every *x* seconds or minutes thereafter.
+- Also allow the user to refresh data manually via an `actionButton`.
+
+I was able to accomplish most of what I needed using these examples:
+
+- ["Reactive Programming with R Shiny" on alshum.com](http://www.alshum.com/shiny-reactive/)
+- [reactiveTimer examples on RStudio.com](https://shiny.rstudio.com/reference/shiny/latest/reactiveTimer.html)
+
+The methods I used are shown in the example code below. To keep things simple, I've used a call to `Sys.time()` to simulate an API call that retrieves continuously updated data. In the example, the timer is set to refresh the data every 5 seconds.
+
+```{r eval=FALSE}
+library(shiny)
+library(lubridate)
+
+ui <- fluidPage(
+        actionButton("refreshData","Refresh data"),
+        h3("Current seconds. Will increment by five unless manually refreshed."),
+        h3(textOutput("currentTime"))
+)
+
+server <- function(input, output) {
+        
+        # initialize reactivevalues
+        myReactiveData  <- reactiveValues(myAPIRequest = NULL)
+        
+        # create a timer
+        autoInvalidate  <- reactiveTimer(5000)
+        
+        observeEvent(
+                # events we're looking for
+                eventExpr = {
+                        # button is pressed
+                        input$refreshData
+                        # timer runs down
+                        autoInvalidate()
+                },
+                # code to run when one of the above events happens
+                handlerExpr = {
+                        # where you would put your API call
+                        myAPIRequest <- Sys.time()
+                        
+                        # do some data processing
+                        processedResults <- round(second(myAPIRequest))
+                        
+                        # assign processed data to reactivevalues object
+                        myReactiveData$dataToDisplay <- processedResults
+                },
+                # make handlerExpr run once when app first starts
+                ignoreNULL = FALSE
+        )
+        
+        output$currentTime <- renderText(
+                myReactiveData$dataToDisplay
+        )
+}
+
+shinyApp(ui, server)
+```
+
+This partially met the requirements, but there was a problem: manually refreshing the data did not affect the timer. If a user manually refreshed the data 3 seconds after initially loading the app, I wanted the timer to reset and wait 5 more seconds before the next automatic refresh. This wasn't happening; the automatic refresh stuck to its original schedule and refreshed every 5 seconds from when the application originally loaded, regardless of user input.
+
+I eventually found [this Stack Overflow article](https://stackoverflow.com/questions/42379402/how-to-terminate-reactivetimer-in-shiny), the key insight from which was the idea of making the timer function itself a reactivevalues object, like so:
+
+```{r eval=FALSE}
+autoInvalidate  <- reactiveValues(timer = reactiveTimer(5000))
+```
+
+In combination with that, I used a second `observeEvent` to look for the manual refresh and reset the timer. The complete updated code looks like this:
+
+```{r eval=FALSE}
+library(shiny)
+library(lubridate)
+
+ui <- fluidPage(
+        actionButton("refreshData","Refresh data"),
+        h3("Current seconds. Will increment by five unless manually refreshed."),
+        h3(textOutput("currentTime"))
+)
+
+server <- function(input, output) {
+        
+        # initialize reactivevalues
+        myReactiveData  <- reactiveValues(myAPIRequest = NULL)
+        autoInvalidate  <- reactiveValues(timer = reactiveTimer(5000))
+        
+        observeEvent(
+                # events we're looking for
+                eventExpr = {
+                        # button is pressed
+                        input$refreshData
+                },
+                handlerExpr = {
+                        # reset the timer
+                        autoInvalidate$timer <- reactiveTimer(5000)
+                }
+        )
+        
+        observeEvent(
+                # events we're looking for
+                eventExpr = {
+                        # button is pressed
+                        input$refreshData
+                        # timer runs down
+                        autoInvalidate$timer()
+                },
+                # code to run when one of the above events happens
+                handlerExpr = {
+                        # where you would put your API call
+                        myAPIRequest <- Sys.time()
+
+                        # do some data processing
+                        processedResults <- round(second(myAPIRequest))
+                        
+                        # assign processed data to reactivevalues object
+                        myReactiveData$dataToDisplay <- processedResults
+                },
+                # make handlerExpr run once when app first starts
+                ignoreNULL = FALSE
+        )
+        
+        output$currentTime <- renderText(
+                myReactiveData$dataToDisplay
+        )
+}
+
+shinyApp(ui, server)
+```
+
+So that's it. In summary, you can do this in Shiny by using multiple `observeEvent` statements and assigning `reactiveTimer` to a reactivevalues object. I don't know if this is the best way to accomplish this, but it worked for me.
