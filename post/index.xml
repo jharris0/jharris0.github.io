@@ -7,17 +7,17 @@
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
     <copyright>Jesse Harris</copyright>
-    <lastBuildDate>Wed, 30 Aug 2017 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 29 Aug 2017 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
       <title>Refreshing Data from an API in an R Shiny App</title>
-      <link>/2017/08/30/refreshing-data-from-an-api-in-an-r-shiny-app/</link>
-      <pubDate>Wed, 30 Aug 2017 00:00:00 +0000</pubDate>
+      <link>/2017/08/29/refreshing-data-from-an-api-in-an-r-shiny-app/</link>
+      <pubDate>Tue, 29 Aug 2017 00:00:00 +0000</pubDate>
       
-      <guid>/2017/08/30/refreshing-data-from-an-api-in-an-r-shiny-app/</guid>
+      <guid>/2017/08/29/refreshing-data-from-an-api-in-an-r-shiny-app/</guid>
       <description>Posting this in case it helps others like me who are new to Shiny. I was working on a Shiny application with the following requirements:
 When the application loads, pull source data from an API.Automatically refresh the data every x seconds or minutes thereafter.Also allow the user to refresh data manually via an actionButton.I was able to accomplish most of what I needed using these examples:</description>
     </item>
